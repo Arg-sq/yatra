@@ -1,0 +1,50 @@
+# redeploy
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    env:
+      NEXT_PUBLIC_BASE_URL: http://3.6.94.130
+      NEXT_PUBLIC_APP_URL: https://3.6.94.130:3000
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Set environment variables for build
+        run: |
+          echo "NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}" >> .env.production
+          echo "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}" >> .env.production
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    needs: build
+    runs-on: self-hosted
+
+    steps:
+      - name: Set environment variables for deployment
+        run: |
+          echo "NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}" >> .env.production
+          echo "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}" >> .env.production
+
+      - name: Deploy to production
+        run: |
+          pm2 del yatra-web:3000 || true
+          pm2 start npm --name "yatra-web:3000" -- start
